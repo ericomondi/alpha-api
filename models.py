@@ -9,6 +9,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:2345@localhost/al
 app.config['SQLALCHEMY_TRACK_CONFIGURATION'] = False
 db = SQLAlchemy(app)
 
+
 class Product(db.Model):
     __tablename__='products'
     id = db.Column(db.Integer, primary_key=True)
@@ -26,3 +27,12 @@ class Sale(db.Model):
     created_at=db.Column(db.DateTime,default=datetime.utcnow ,nullable=False)
 
     # product=db.relationship("Product",backref='sales')
+
+
+
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    public_id = db.Column(db.String(50), unique=True)
+    name = db.Column(db.String(50))
+    password = db.Column(db.String(256))
+    admin = db.Column(db.Boolean)

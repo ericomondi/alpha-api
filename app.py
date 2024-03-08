@@ -1,51 +1,24 @@
-import sentry_sdk
-from flask import request, jsonify
-from sentry_sdk import capture_exception
-from models import Product, app, db
+#C:\flask_dev\flaskreact\app.py
+import json
+from flask import Flask, request, jsonify
+from datetime import datetime, timedelta, timezone
+from flask_jwt_extended import create_access_token,get_jwt,get_jwt_identity, unset_jwt_cookies, jwt_required, JWTManager #pip install Flask-JWT-Extended = https://pypi.org/project/Flask-JWT-Extended/
+from flask_bcrypt import Bcrypt #pip install Flask-Bcrypt = https://pypi.org/project/Flask-Bcrypt/
+from flask_cors import CORS #ModuleNotFoundError: No module named 'flask_cors' = pip install Flask-Cors
+ 
+from models import db, User, app
 
+CORS(app, supports_credentials=True)
+ 
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
+jwt = JWTManager(app)
+ 
+SQLALCHEMY_TRACK_MODIFICATIONS = False
+SQLALCHEMY_ECHO = True
+ 
+bcrypt = Bcrypt(app)    
+db.init_app(app)
+  
+with app.app_context():
+    db.create_all()
 
-sentry_sdk.init(
-    dsn="https://b078e1ac4e38282ba56b7988cbdccc0a@us.sentry.io/4506695599849472",
-    traces_sample_rate=1.0,
-    profiles_sample_rate=1.0,
-)
-
-db.create_all()
-
-#Get all products and store product
-@app.route("/products", methods=["POST", "GET", "PUT", "PATCH", "DELETE"])
-def prods():
-    if request.method == "GET":
-        try:
-            prods = Product.query.all()
-            res = []
-            for i in prods:
-                res.append({"id": i.id,"name": i.name, "price": i.price })
-            return jsonify(res), 200
-        except Exception as e:
-            # capture_exception(e)
-            return jsonify({"Error" : str(e)}), 500
-        
-    elif request.method == "POST":
-        if request.is_json:
-           try:
-                data = request.json
-                new_data = Product(name=data['name'], price= data['price'])
-                db.session.add(new_data)
-                db.session.commit()
-                r = f'Successfully stored product id: {str(new_data.id)}'
-                res = {"Result" : r}
-                return jsonify(res), 201
-           except Exception as e:
-                return jsonify({"Error" : str(e)}), 500
-        else:
-            return jsonify({"Error" : "Data is not json"}), 400 
-    else:
-        return jsonify({"Error" : "Method not allowed."}), 403
-        
-#Task by Thursday
-#Get a single product in the route
-#Create a new project call it alpha-app,make it boostrapand datatables enabled with dummy data(products) in a table
-#Have a form in a bootstrap modal with products input
-#Push your latest code. Create a new repo on github for alpha-app
-        

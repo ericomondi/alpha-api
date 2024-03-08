@@ -26,6 +26,9 @@ sentry_sdk.init(
 
 
 CORS(app)
+CORS(app, resources={r"/api/*": {"origins": "http://127.0.0.1:5000"}})
+
+
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -52,12 +55,12 @@ def token_required(f):
 
 
 
+
 # def token_required(f):
 #     @wraps(f)
 #     def decorated(*args, **kwargs):
-#         token = request.headers.get('x-access-token')
-#         print(token)
-
+#         token = kwargs.get('token')  # Retrieve the token from kwargs
+        
 #         if not token:
 #             return jsonify({'message': 'Token is missing!'}), 401
 
@@ -78,42 +81,46 @@ def token_required(f):
 #     return decorated
 
 
-
 @app.route("/products", methods=["POST", "GET"])
 @token_required
 def prods(current_user):
-    if request.method == "GET":
-        try:
-            prods = Product.query.all()
-            p_dict = []
-            for prod in prods:
-                p_dict.append(
-                    {"id": prod.id, "name": prod.name, "price": prod.price})
-            return jsonify(p_dict)
-        except Exception as e:
-            print(e)
-            # capture_exception(e)
-            return jsonify({})
-
-    elif request.method == "POST":
-        if request.is_json:
+    if current_user:
+        print(current_user)
+        if request.method == "GET":
             try:
-                data = request.json
-                new_product = Product(name=data.get(
-                    'name'), price=data.get('price'))
-                db.session.add(new_product)
-                db.session.commit()
-                r = "Product added successfully." + str(new_product.id)
-                res = {"result": r}
-                return jsonify(res), 201
+                prods = Product.query.all()
+                p_dict = []
+                for prod in prods:
+                    p_dict.append(
+                        {"id": prod.id, "name": prod.name, "price": prod.price})
+                return jsonify(p_dict)
             except Exception as e:
                 print(e)
                 # capture_exception(e)
-                return jsonify({"error": "Internal Server Error"}), 500
+                return jsonify({})
+
+        elif request.method == "POST":
+            if request.is_json:
+                try:
+                    data = request.json
+                    new_product = Product(name=data.get(
+                        'name'), price=data.get('price'))
+                    db.session.add(new_product)
+                    db.session.commit()
+                    r = "Product added successfully." + str(new_product.id)
+                    res = {"result": r}
+                    return jsonify(res), 201
+                except Exception as e:
+                    print(e)
+                    # capture_exception(e)
+                    return jsonify({"error": "Internal Server Error"}), 500
+            else:
+                return jsonify({"error": "Data is not JSON."}), 400
         else:
-            return jsonify({"error": "Data is not JSON."}), 400
+            return jsonify({"error": "Method not allowed."}), 400
+        
     else:
-        return jsonify({"error": "Method not allowed."}), 400
+        return jsonify({"error": "User is not authorized"})
 
 
 @app.route('/get-product<int:product_id>', methods=['GET'])
@@ -172,7 +179,7 @@ def sales():
 
 
 @app.route('/dashboard', methods=["GET"])
-@token_required
+# @token_required
 def dashboard():
 
     # Query to get sales per day
@@ -274,7 +281,7 @@ def login():
         return make_response('Could not verify', 401, {'WWW-Authenticate' : 'Basic realm="Login required!"'})
 
     if check_password_hash(user.password, auth.get('password')):
-        token = jwt.encode({'public_id' : user.public_id, 'exp' : datetime.datetime.utcnow() + datetime.timedelta(minutes=30)}, app.config['SECRET_KEY'], algorithm="HS256")
+        token = jwt.encode({'public_id' : user.public_id, 'exp' : datetime.datetime.utcnow() + datetime.timedelta(seconds=8)}, app.config['SECRET_KEY'], algorithm="HS256")
         print(token)
 
         # Decode and print the token
